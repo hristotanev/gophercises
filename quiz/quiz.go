@@ -7,12 +7,19 @@ import (
 	"io"
 	"io/ioutil"
 	"strings"
+	"time"
 )
 
-func part1(fileContents string) {
-  questions, correctAnswers := 0, 0
+func runQuiz(fileContents, timeLimit string) {
+  input := make(chan string)
   csvReader := csv.NewReader(strings.NewReader(fileContents))
 
+  duration, err := time.ParseDuration(timeLimit)
+  if err != nil {
+    panic("Could not parse the time limit specified.")
+  }
+
+  questions, correctAnswers := 0, 0
   for {
     line, err := csvReader.Read()
     if err == io.EOF {
@@ -23,30 +30,44 @@ func part1(fileContents string) {
       panic(err)
     }
 
-    fmt.Print("How much is ", line[0], ": ")
-    var usersAnswer string
-    fmt.Scan(&usersAnswer)
+    fmt.Print(line[0], ": ")
+    go func () {
+      var usersAnswer string
+      fmt.Scan(&usersAnswer)
+      input <- usersAnswer
+    }()
 
-    if line[1] == usersAnswer {
-      correctAnswers++
+    select {
+    case answer := <-input:
+      if line[1] == answer {
+        correctAnswers++
+      }
+    case <-time.After(duration):
+      fmt.Println()
     }
 
     questions++
   }
+
+  close(input)
 
   fmt.Println("Total number of questions", questions)
   fmt.Println("Questions answered correctly", correctAnswers)
 }
 
 func main() {
-  filePath := flag.String("f", "./problems.csv", "file path of problems")
+  filePath := flag.String("file", "./problems.csv", "file path of problems")
+  timeLimit := flag.String("tta", "30s", "time to answer each question")
   flag.Parse()
+
+  fmt.Printf("Press any key to continue. You will have %s to answer each question.", *timeLimit)
+  fmt.Scanln()
 
   file, err := ioutil.ReadFile(*filePath)
   if err != nil {
-    panic("input file does not exist")
+    panic("Input file does not exist or file path is wrong.")
   }
 
   contents := string([]byte(file))
-  part1(contents)
+  runQuiz(contents, *timeLimit)
 }
