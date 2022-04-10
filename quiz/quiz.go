@@ -34,7 +34,7 @@ func runQuiz(fileContents, timeLimit string) {
     go func () {
       var usersAnswer string
       fmt.Scan(&usersAnswer)
-      input <- usersAnswer
+      input <- strings.ToLower(strings.TrimSpace(usersAnswer))
     }()
 
     select {
