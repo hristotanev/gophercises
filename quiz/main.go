@@ -36,13 +36,17 @@ func getQuestionsFromCSV(fileContents string) []Question {
   return questions
 }
 
-func runQuiz(fileContents string, duration time.Duration) {
-  questionnaire := &Questionnaire{
+func startQuiz(fileContents string, duration time.Duration, shouldShuffleQuestions bool) {
+  quiz := &Quiz{
     Questions: getQuestionsFromCSV(fileContents),
     CorrectlyAnsweredQuestions: 0,
   }
 
-  for _, question := range questionnaire.Questions {
+  if shouldShuffleQuestions {
+    quiz.ShuffleQuestions()
+  }
+
+  for _, question := range quiz.Questions {
     fmt.Print(question.Question, ": ")
     go func () {
       var answer string
@@ -52,18 +56,19 @@ func runQuiz(fileContents string, duration time.Duration) {
 
     select {
     case answer := <-inputChannel:
-      questionnaire.EvaluateAnswer(answer, question)
+      quiz.EvaluateAnswer(answer, question)
     case <-time.After(duration):
       fmt.Println()
     }
   }
 
-  questionnaire.PrintSummary()
+  quiz.PrintSummary()
 }
 
 func main() {
   filePath := flag.String("file", "./problems.csv", "file path of problems")
   timeLimit := flag.String("tta", "30s", "time to answer each question")
+  shouldShuffleQuestions := flag.Bool("shfl", false, "enable question shuffle")
   flag.Parse()
 
   file, err := ioutil.ReadFile(*filePath)
@@ -82,7 +87,7 @@ func main() {
   inputChannel = make(chan string)
 
   contents := string([]byte(file))
-  runQuiz(contents, duration)
+  startQuiz(contents, duration, *shouldShuffleQuestions)
 
   close(inputChannel)
 }
