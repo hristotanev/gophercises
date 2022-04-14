@@ -56,7 +56,7 @@ func startQuiz(fileContents string, duration time.Duration, shouldShuffleQuestio
 
     select {
     case answer := <-inputChannel:
-      quiz.EvaluateAnswer(answer, question)
+      quiz.AddQuestionAnswer(question.EvaluateAnswer(answer))
     case <-time.After(duration):
       fmt.Println()
     }
